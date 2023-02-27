@@ -104,6 +104,8 @@ type Dialer struct {
 	// per message compression (RFC 7692). Setting this value to true does not
 	// guarantee that compression will be supported. Currently only "no context
 	// takeover" modes are supported.
+	// 如果被设置，那么会在请求时添加一个 Sec-WebSocket-Extensions 的请求头，
+	// 如果响应头里也有对应的内容，那么此后用压缩模式来传输数据
 	EnableCompression bool
 
 	// Jar specifies the cookie jar.
@@ -157,11 +159,13 @@ var nilDialer = *DefaultDialer
 // non-nil *http.Response so that callers can handle redirects, authentication,
 // etcetera. The response body may not contain the entire response and does not
 // need to be closed by the application.
+// 自动根据 ws 还是 wss 而调整为 http/https，支持 httptrace
 func (d *Dialer) DialContext(ctx context.Context, urlStr string, requestHeader http.Header) (*Conn, *http.Response, error) {
 	if d == nil {
 		d = &nilDialer
 	}
 
+	// RPC 中规定 16 字节内容的 base64 编码
 	challengeKey, err := generateChallengeKey()
 	if err != nil {
 		return nil, nil, err
@@ -239,6 +243,7 @@ func (d *Dialer) DialContext(ctx context.Context, urlStr string, requestHeader h
 		req.Header["Sec-WebSocket-Extensions"] = []string{"permessage-deflate; server_no_context_takeover; client_no_context_takeover"}
 	}
 
+	// 从这里开始 ctx 与传给 req 的 ctx 不相同
 	if d.HandshakeTimeout != 0 {
 		var cancel func()
 		ctx, cancel = context.WithTimeout(ctx, d.HandshakeTimeout)
@@ -248,6 +253,7 @@ func (d *Dialer) DialContext(ctx context.Context, urlStr string, requestHeader h
 	// Get network dial function.
 	var netDial func(network, add string) (net.Conn, error)
 
+	// d 中的这些 Dial 函数都可以自定义
 	switch u.Scheme {
 	case "http":
 		if d.NetDialContext != nil {
@@ -391,6 +397,7 @@ func (d *Dialer) DialContext(ctx context.Context, urlStr string, requestHeader h
 		}
 	}
 
+	// 验证服务端是否支持 websocket
 	if resp.StatusCode != 101 ||
 		!tokenListContainsValue(resp.Header, "Upgrade", "websocket") ||
 		!tokenListContainsValue(resp.Header, "Connection", "upgrade") ||
@@ -418,7 +425,7 @@ func (d *Dialer) DialContext(ctx context.Context, urlStr string, requestHeader h
 		break
 	}
 
-	resp.Body = ioutil.NopCloser(bytes.NewReader([]byte{}))
+	resp.Body = ioutil.NopCloser(bytes.NewReader([]byte{})) // 包一层，避免函数外误调用 Close 导致连接关闭
 	conn.subprotocol = resp.Header.Get("Sec-Websocket-Protocol")
 
 	netConn.SetDeadline(time.Time{})

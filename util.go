@@ -16,6 +16,7 @@ import (
 
 var keyGUID = []byte("258EAFA5-E914-47DA-95CA-C5AB0DC85B11")
 
+// 将 challengeKey 与 GUID 拼接，然后 sha1 + base64
 func computeAcceptKey(challengeKey string) string {
 	h := sha1.New()
 	h.Write([]byte(challengeKey))
@@ -23,6 +24,7 @@ func computeAcceptKey(challengeKey string) string {
 	return base64.StdEncoding.EncodeToString(h.Sum(nil))
 }
 
+// 从 rand.Reader 读取 16 位的随机数，然后用 base64 编码
 func generateChallengeKey() (string, error) {
 	p := make([]byte, 16)
 	if _, err := io.ReadFull(rand.Reader, p); err != nil {

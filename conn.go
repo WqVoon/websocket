@@ -282,6 +282,7 @@ type Conn struct {
 	newDecompressionReader func(io.Reader) io.ReadCloser
 }
 
+// 创建一个 websocket 连接对象，readBufferSize 仅在 br 为 ni 时生效，会创建对应大小（如果合理）的 Reader
 func newConn(conn net.Conn, isServer bool, readBufferSize, writeBufferSize int, writeBufferPool BufferPool, br *bufio.Reader, writeBuf []byte) *Conn {
 
 	if br == nil {
