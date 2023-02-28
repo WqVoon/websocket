@@ -227,6 +227,8 @@ headers:
 }
 
 // parseExtensions parses WebSocket extensions from a header.
+// 用逗号分组，每组一个 map；用分号分 kv，带等号的会直接分出键值写入 map，
+// 不带等号的要区分组内第几个，第一个的值作为 map 的值（键是空字符串），剩下的作为 map 的键（值是空字符串）
 func parseExtensions(header http.Header) []map[string]string {
 	// From RFC 6455:
 	//

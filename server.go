@@ -98,6 +98,7 @@ func checkSameOrigin(r *http.Request) bool {
 	return equalASCIIFold(u.Host, r.Host)
 }
 
+// 先尝试从 u.Subprotocols 中寻找与请求头中的内容相同的值，否则直接返回 responseHeader 中的值
 func (u *Upgrader) selectSubprotocol(r *http.Request, responseHeader http.Header) string {
 	if u.Subprotocols != nil {
 		clientProtocols := Subprotocols(r)
